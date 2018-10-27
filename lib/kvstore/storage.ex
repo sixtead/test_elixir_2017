@@ -24,13 +24,14 @@ defmodule KVstore.Storage do
     GenServer.call(pid, {:get, key})
   end
 
-   def list(pid) do
+  def list(pid) do
     GenServer.call(pid, :list)
   end
 
   # Server (callbacks)
 
   def init(_args) do
+    schedule_ttl_decrease(1000)
     {:ok, %{}}
   end
 
@@ -70,6 +71,19 @@ defmodule KVstore.Storage do
   # Retrieves all storage values
   def handle_call(:list, _from, state) do
     {:reply, state, state}
+  end
+
+  # Decreases ttl of all records
+  def handle_info({:decrease_ttl, amount}, state) do
+    state = Enum.map(state, fn {key, {value, ttl}} -> {key, {value, ttl - amount}} end)
+            |> Stream.filter(fn {_key, {_value, ttl}} -> ttl > 0 end)
+            |> Enum.into(%{})
+    schedule_ttl_decrease(amount)
+    {:noreply, state}
+  end
+
+  defp schedule_ttl_decrease(timeout) do
+    Process.send_after(self(), {:decrease_ttl, timeout}, timeout)
   end
 
 end

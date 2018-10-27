@@ -54,4 +54,41 @@ defmodule KVstoreTest do
     KVstore.Storage.add(storage, "key02", "value02", 2000)
     assert KVstore.Storage.list(storage) == %{"key01" => {"value01", 1000}, "key02" => {"value02", 2000}}
   end
+
+#  Test TTL
+
+  test "record gets deleted after ttl is passed", %{storage: storage} do
+    KVstore.Storage.add(storage, "key", "value", 1000)
+
+    assert KVstore.Storage.get(storage, "key") != nil
+    :timer.sleep(1000)
+    assert KVstore.Storage.get(storage, "key") == nil
+  end
+
+  test "when ttl ticks actual value of record is not changed", %{storage: storage} do
+    KVstore.Storage.add(storage, "key", "value", 2000)
+
+    :timer.sleep(1000)
+    assert {"value", _ttl} = KVstore.Storage.get(storage, "key")
+  end
+
+  test "record gets deleted not earlier than ttl gets to zero", %{storage: storage} do
+    KVstore.Storage.add(storage, "key", "value", 2000)
+
+    :timer.sleep(1000)
+    assert KVstore.Storage.get(storage, "key") != nil
+
+    :timer.sleep(1000)
+    assert KVstore.Storage.get(storage, "key") == nil
+  end
+
+  test "deleting a record does not cause any problems", %{storage: storage} do
+    KVstore.Storage.add(storage, "key", "value", 2000)
+    KVstore.Storage.delete(storage, "key")
+
+    assert KVstore.Storage.get(storage, "key") == nil
+
+    :timer.sleep(2000)
+  end
+
 end
