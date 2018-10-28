@@ -12,6 +12,9 @@ use Mix.Config
 #
 #     config :kvstore, key: :value
 #
+config :kvstore,
+  database_path: "store_db",
+  timeout: 1000
 # And access this configuration in your application as:
 #
 #     Application.get_env(:kvstore, :key)

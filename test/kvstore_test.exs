@@ -91,4 +91,11 @@ defmodule KVstoreTest do
     :timer.sleep(2000)
   end
 
+
+#  Test storage persistency
+
+  test "can write storage state to file and read it back", %{storage: storage} do
+
+  end
+
 end
