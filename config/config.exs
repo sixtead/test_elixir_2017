@@ -14,7 +14,8 @@ use Mix.Config
 #
 config :kvstore,
   database_path: "store_db",
-  timeout: 1000
+  timeout: 1000,
+  port: 8080
 # And access this configuration in your application as:
 #
 #     Application.get_env(:kvstore, :key)

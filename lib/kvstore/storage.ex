@@ -9,15 +9,15 @@ defmodule KVstore.Storage do
   end
 
   def add(pid, key, value, ttl) do
-    GenServer.cast(pid, {:add, key, value, ttl})
+    GenServer.call(pid, {:add, key, value, ttl})
   end
 
   def update(pid, key, value, ttl) do
-    GenServer.cast(pid, {:update, key, value, ttl})
+    GenServer.call(pid, {:update, key, value, ttl})
   end
 
   def delete(pid, key) do
-    GenServer.cast(pid, {:delete, key})
+    GenServer.call(pid, {:delete, key})
   end
 
   def get(pid, key) do
@@ -33,37 +33,38 @@ defmodule KVstore.Storage do
   def init(_args) do
     ensure_file_for_storage(Application.get_env(:kvstore, :database_path))
     term = restore_from_file(Application.get_env(:kvstore, :database_path))
-
     schedule_ttl_decrease(Application.get_env(:kvstore, :timeout))
     {:ok, term}
   end
 
 # Adds a record only if ttl is integer
-  def handle_cast({:add, key, value, ttl}, state) when is_integer(ttl) do
-    {:noreply, Map.put_new(state, key, {value, ttl})}
-  end
-
-  def handle_cast({:add, _key, _value, _ttl}, state) do
-    {:noreply, state}
+  def handle_call({:add, key, value, ttl}, _from, state) when is_integer(ttl) do
+  {reply, state} = if Map.has_key?(state, key) do
+      {nil, state}
+    else
+      {{key, {value, ttl}}, Map.put(state, key, {value, ttl})}
+    end
+    {:reply, reply, state}
   end
 
 # Updates a record only if it exists and ttl is integer
-  def handle_cast({:update, key, value, ttl}, state) when is_integer(ttl) do
-    state = if Map.has_key?(state, key) do
-      Map.put(state, key, {value, ttl})
+  def handle_call({:update, key, value, ttl}, _from, state) when is_integer(ttl) do
+    {reply, state} = unless Map.has_key?(state, key) do
+      {nil, state}
     else
-      state
+      {{key, {value, ttl}}, Map.put(state, key, {value, ttl})}
     end
-    {:noreply, state}
-  end
-
-  def handle_cast({:update, _key, _value, _ttl}, state) do
-    {:noreply, state}
+    {:reply, reply, state}
   end
 
 # Deletes a record by key
-  def handle_cast({:delete, key}, state) do
-    {:noreply, Map.delete(state, key)}
+  def handle_call({:delete, key}, _from, state) do
+    {reply, state} = unless Map.has_key?(state, key) do
+      {nil, state}
+    else
+      {{key, Map.get(state, key)}, Map.delete(state, key)}
+    end
+    {:reply, reply, state}
   end
 
 # Retrieves record's value by key
